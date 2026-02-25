@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art Deco India — Postcard Maker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poiret+One&display=swap');
+
+  :root {
+    --gold: #C9A84C;
+    --deep-gold: #8B6914;
+    --ivory: #F5EDD6;
+    --cream: #FBF6E9;
+    --deep-teal: #0D3B38;
+    --teal: #1A5C57;
+    --rust: #A63C2A;
+    --dark: #0A0A0A;
+    --card-w: 680px;
+    --card-h: 440px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #080B0A;
+    color: var(--ivory);
+    font-family: 'Poiret One', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Art Deco grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* === HEADER === */
+  header {
+    text-align: center;
+    padding: 32px 20px 16px;
+    border-bottom: 1px solid rgba(201,168,76,0.3);
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    display: block;
+    width: 200px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 12px auto 0;
+  }
+
+  .header-label {
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(18px, 3vw, 30px);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold), var(--ivory), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 4px;
+    line-height: 1.2;
+  }
+
+  /* === LAYOUT === */
+  .app {
+    display: grid;
+    grid-template-columns: 260px 1fr 260px;
+    gap: 0;
+    min-height: calc(100vh - 120px);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  /* === SIDE PANELS === */
+  .panel {
+    padding: 20px 16px;
+    border-right: 1px solid rgba(201,168,76,0.15);
+  }
+
+  .panel:last-child {
+    border-right: none;
+    border-left: 1px solid rgba(201,168,76,0.15);
+  }
+
+  .panel-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 9px;
+    letter-spacing: 5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+    opacity: 0.4;
+  }
+
+  /* === ELEMENT GRID === */
+  .elements-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .elem-btn {
+    background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 4px;
+    padding: 10px 6px;
+    cursor: grab;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--ivory);
+    font-family: 'Poiret One', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .elem-btn svg, .elem-btn .elem-icon {
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+  }
+
+  .elem-btn:hover {
+    background: rgba(201,168,76,0.15);
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(201,168,76,0.2);
+  }
+
+  .elem-btn:active { cursor: grabbing; }
+
+  /* === CANVAS AREA === */
+  .canvas-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .postcard-wrapper {
+    position: relative;
+    width: var(--card-w);
+    max-width: 100%;
+    aspect-ratio: 680/440;
+  }
+
+  #postcard {
+    width: var(--card-w);
+    max-width: 100%;
+    height: var(--card-h);
+    max-height: calc(var(--card-w) * 440/680);
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    cursor: default;
+    box-shadow: 0 0 0 1px rgba(201,168,76,0.5), 0 8px 48px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,0,0,0.2);
+  }
+
+  /* Paper texture base */
+  .card-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--ivory);
+    transition: background 0.4s;
+  }
+
+  .card-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23p)' opacity='0.07'/%3E%3C/svg%3E");
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Border frame that changes with layout */
+  .card-frame {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* Dropped elements container */
+  #elements-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+  }
+
+  .dropped-el {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    transition: filter 0.15s;
+  }
+
+  .dropped-el:hover { filter: drop-shadow(0 2px 8px rgba(201,168,76,0.5)); }
+  .dropped-el.selected {
+    outline: 1.5px dashed var(--gold);
+    outline-offset: 3px;
+  }
+
+  .dropped-el .del-handle {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 18px;
+    height: 18px;
+    background: var(--rust);
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 20;
+    color: white;
+    line-height: 1;
+  }
+
+  .dropped-el.selected .del-handle { display: flex; }
+
+  .dropped-el .resize-handle {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    background: var(--gold);
+    border-radius: 2px;
+    cursor: se-resize;
+    display: none;
+    z-index: 20;
+  }
+
+  .dropped-el.selected .resize-handle { display: block; }
+
+  /* Stamp effect on drop */
+  @keyframes stamp {
+    0% { transform: scale(1.4); opacity: 0.3; }
+    60% { transform: scale(0.95); }
+    80% { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .stamp-anim { animation: stamp 0.35s cubic-bezier(0.22,0.61,0.36,1) forwards; }
+
+  /* === CONTROLS === */
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    font-family: 'Poiret One', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+  }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--deep-gold));
+    border-color: var(--gold);
+    color: var(--dark);
+    font-weight: 700;
+  }
+
+  .btn-gold:hover { filter: brightness(1.15); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(201,168,76,0.4); }
+
+  .btn-outline {
+    background: transparent;
+    border-color: rgba(201,168,76,0.5);
+    color: var(--gold);
+  }
+
+  .btn-outline:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+
+  .btn-danger {
+    background: transparent;
+    border-color: rgba(166,60,42,0.5);
+    color: #C9614A;
+  }
+
+  .btn-danger:hover { background: rgba(166,60,42,0.15); border-color: var(--rust); }
+
+  /* === VERSIONS PANEL === */
+  .versions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .version-card {
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .version-card:hover { border-color: var(--gold); }
+  .version-card img { width: 100%; display: block; }
+  .version-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    padding: 4px 6px;
+    background: rgba(0,0,0,0.3);
+    text-align: center;
+  }
+
+  /* === TYPOGRAPHY PANEL === */
+  .type-samples {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .type-btn {
+    padding: 8px 10px;
+    background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    color: var(--ivory);
+  }
+
+  .type-btn:hover { background: rgba(201,168,76,0.15); border-color: var(--gold); }
+
+  /* === BG COLOR SWATCHES === */
+  .swatch-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 2px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .swatch:hover, .swatch.active { border-color: var(--gold); transform: scale(1.15); }
+
+  /* === MODAL === */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: #0F1A18;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    padding: 40px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(201,168,76,0.15);
+    position: relative;
+  }
+
+  .modal::before {
+    content: '◆';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0F1A18;
+    color: var(--gold);
+    padding: 0 8px;
+    font-size: 14px;
+  }
+
+  .modal h3 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 14px;
+    color: var(--gold);
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
+
+  .modal p { font-size: 13px; color: var(--ivory); opacity: 0.8; margin-bottom: 24px; line-height: 1.6; }
+  .modal-btns { display: flex; gap: 12px; justify-content: center; }
+
+  /* === DROP TARGET HIGHLIGHT === */
+  #postcard.drag-over::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 2px dashed var(--gold);
+    border-radius: 2px;
+    z-index: 100;
+    pointer-events: none;
+    animation: flicker 0.8s infinite;
+  }
+
+  @keyframes flicker { 0%,100%{opacity:0.6} 50%{opacity:1} }
+
+  /* Layout variants */
+  .layout-1 .card-bg { background: #F5EDD6; }
+  .layout-2 .card-bg { background: #E8DCC0; }
+  .layout-3 .card-bg { background: #D4E8E4; }
+  .layout-4 .card-bg { background: #0D3B38; }
+  .layout-5 .card-bg { background: #1A0A00; }
+
+  /* SVG icons color variants */
+  .layout-4 .dropped-el svg path, .layout-4 .dropped-el svg rect, .layout-4 .dropped-el svg circle,
+  .layout-5 .dropped-el svg path, .layout-5 .dropped-el svg rect, .layout-5 .dropped-el svg circle { stroke: var(--gold) !important; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-label">✦ Interactive Postcard Workshop ✦</div>
+  <h1>ART DECO INDIA</h1>
+</header>
+
+<div class="app">
+  <!-- LEFT PANEL: Motifs & Buildings -->
+  <div class="panel" id="left-panel">
+    <div class="panel-title">Motifs</div>
+    <div class="elements-grid" id="motifs-grid"></div>
+    <div class="panel-title">Buildings</div>
+    <div class="elements-grid" id="buildings-grid"></div>
+    <div class="panel-title">Typography</div>
+    <div class="type-samples" id="type-panel"></div>
+  </div>
+
+  <!-- CENTER: Canvas -->
+  <div class="canvas-area">
+    <div class="postcard-wrapper">
+      <div id="postcard" class="layout-1">
+        <div class="card-bg"></div>
+        <svg class="card-frame" id="card-frame-svg" viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="elements-layer"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn btn-gold" onclick="randomLayout()">⟳ Change Layout</button>
+      <button class="btn btn-outline" onclick="saveVersion()">✦ Save Version</button>
+      <button class="btn btn-danger" onclick="confirmClear()">✕ Clear</button>
+    </div>
+    <div style="font-size:10px;letter-spacing:2px;color:rgba(201,168,76,0.4);text-align:center;">DRAG ELEMENTS · CLICK TO SELECT · DOUBLE-CLICK TO DELETE</div>
+  </div>
+
+  <!-- RIGHT PANEL: Colours & Versions -->
+  <div class="panel">
+    <div class="panel-title">Paper</div>
+    <div class="swatch-row" id="swatch-row"></div>
+
+    <div class="panel-title">Colour</div>
+    <div class="swatch-row" id="ink-swatch-row"></div>
+
+    <div class="panel-title">Saved Versions</div>
+    <div class="versions-list" id="versions-list">
+      <div style="font-size:10px;letter-spacing:1px;color:rgba(201,168,76,0.35);text-align:center;padding:20px 0;">No versions saved yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="clear-modal">
+  <div class="modal">
+    <h3>Clear Canvas</h3>
+    <p>Would you like to save this as a version before clearing?</p>
+    <div class="modal-btns">
+      <button class="btn btn-gold" onclick="saveAndClear()">Save & Clear</button>
+      <button class="btn btn-danger" onclick="directClear()">Just Clear</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== ART DECO SVG ELEMENTS =====================
+
+const MOTIFS = [
+  {
+    id: 'lotus', label: 'Lotus',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#8B6914" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="55" rx="6" ry="20" stroke="#C9A84C"/>
+      <ellipse cx="28" cy="50" rx="5" ry="16" transform="rotate(-20 28 50)" stroke="#C9A84C"/>
+      <ellipse cx="52" cy="50" rx="5" ry="16" transform="rotate(20 52 50)" stroke="#C9A84C"/>
+      <ellipse cx="18" cy="42" rx="4" ry="13" transform="rotate(-38 18 42)" stroke="#8B6914"/>
+      <ellipse cx="62" cy="42" rx="4" ry="13" transform="rotate(38 62 42)" stroke="#8B6914"/>
+      <line x1="40" y1="68" x2="40" y2="75" stroke="#C9A84C"/>
+      <path d="M30 75 Q40 71 50 75" stroke="#C9A84C" fill="none"/>
+      <circle cx="40" cy="40" r="4" fill="none" stroke="#C9A84C"/>
+    </svg>`
+  },
+  {
+    id: 'sunburst', label: 'Sunburst',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="40" r="8" stroke="#C9A84C"/>
+      <circle cx="40" cy="40" r="13" stroke="#C9A84C" stroke-width="0.5" stroke-dasharray="3,2"/>
+      ${Array.from({length:12},(_,i)=>{
+        const a=i*30*Math.PI/180; const x1=40+16*Math.cos(a); const y1=40+16*Math.sin(a); const x2=40+28*Math.cos(a); const y2=40+28*Math.sin(a);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${i%2===0?'#C9A84C':'#8B6914'}"/>`
+      }).join('')}
+    </svg>`
+  },
+  {
+    id: 'peacock', label: 'Peacock',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="52" rx="8" ry="12" stroke="#C9A84C"/>
+      <circle cx="40" cy="36" r="7" stroke="#C9A84C"/>
+      <path d="M40 30 Q44 22 48 18" stroke="#8B6914"/>
+      <path d="M40 30 Q36 22 32 18" stroke="#8B6914"/>
+      <path d="M40 30 L40 20" stroke="#C9A84C"/>
+      <ellipse cx="40" cy="52" rx="18" ry="10" transform="rotate(-30 40 52)" stroke="#8B6914" stroke-width="0.8"/>
+      <ellipse cx="40" cy="52" rx="18" ry="10" transform="rotate(30 40 52)" stroke="#8B6914" stroke-width="0.8"/>
+      <ellipse cx="40" cy="52" rx="18" ry="8" transform="rotate(0 40 52)" stroke="#8B6914" stroke-width="0.8"/>
+      <circle cx="37" cy="36" r="1.5" fill="#C9A84C"/>
+    </svg>`
+  },
+  {
+    id: 'chevron', label: 'Chevron',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#C9A84C" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
+      <polyline points="15,65 40,20 65,65" stroke="#C9A84C"/>
+      <polyline points="20,65 40,28 60,65" stroke="#8B6914" stroke-width="1"/>
+      <polyline points="25,65 40,36 55,65" stroke="#C9A84C" stroke-width="0.7"/>
+      <line x1="15" y1="65" x2="65" y2="65" stroke="#C9A84C"/>
+      <line x1="20" y1="65" x2="60" y2="65" stroke="rgba(201,168,76,0.4)" stroke-width="0.5"/>
+    </svg>`
+  },
+  {
+    id: 'elephant', label: 'Elephant',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#8B6914" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <rect x="22" y="38" width="36" height="22" rx="6" stroke="#C9A84C"/>
+      <ellipse cx="40" cy="34" rx="16" ry="12" stroke="#C9A84C"/>
+      <path d="M24 56 L20 70" stroke="#C9A84C"/>
+      <path d="M32 58 L30 70" stroke="#C9A84C"/>
+      <path d="M48 58 L48 70" stroke="#C9A84C"/>
+      <path d="M56 56 L58 70" stroke="#C9A84C"/>
+      <path d="M24 38 Q14 36 14 46 Q14 54 24 54" stroke="#C9A84C" fill="none"/>
+      <circle cx="33" cy="30" r="2" fill="#C9A84C"/>
+      <path d="M36 26 Q40 18 44 26" stroke="#8B6914" fill="none"/>
+      <rect x="30" y="14" width="4" height="13" rx="2" stroke="#C9A84C"/>
+      <rect x="46" y="14" width="4" height="13" rx="2" stroke="#C9A84C"/>
+    </svg>`
+  },
+  {
+    id: 'star', label: 'Star',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      ${[0,45,90,135].map(a=>{
+        const r=a*Math.PI/180;
+        const x1=40+30*Math.cos(r); const y1=40+30*Math.sin(r); const x2=40-30*Math.cos(r); const y2=40-30*Math.sin(r);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${a===45||a===135?'#8B6914':'#C9A84C'}"/>`
+      }).join('')}
+      <polygon points="40,14 43,34 64,40 43,46 40,66 37,46 16,40 37,34" stroke="#C9A84C" fill="none"/>
+      <polygon points="40,24 42,36 54,40 42,44 40,56 38,44 26,40 38,36" stroke="#8B6914" stroke-width="0.7" fill="none"/>
+    </svg>`
+  },
+  {
+    id: 'arch', label: 'Arch',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 70 L20 40 Q20 15 40 15 Q60 15 60 40 L60 70" stroke="#C9A84C"/>
+      <path d="M25 70 L25 42 Q25 22 40 22 Q55 22 55 42 L55 70" stroke="#8B6914" stroke-width="0.8"/>
+      <line x1="15" y1="70" x2="65" y2="70" stroke="#C9A84C"/>
+      <line x1="15" y1="67" x2="65" y2="67" stroke="#C9A84C" stroke-width="0.5"/>
+      ${Array.from({length:5},(_,i)=>`<line x1="${20+i*10}" y1="70" x2="${20+i*10}" y2="64" stroke="#8B6914" stroke-width="0.7"/>`).join('')}
+    </svg>`
+  },
+  {
+    id: 'diamond', label: 'Diamond',
+    svg: `<svg viewBox="0 0 80 80" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="40,10 70,40 40,70 10,40" stroke="#C9A84C"/>
+      <polygon points="40,20 60,40 40,60 20,40" stroke="#8B6914" stroke-width="0.8"/>
+      <polygon points="40,30 50,40 40,50 30,40" stroke="#C9A84C" stroke-width="0.7"/>
+      <line x1="40" y1="10" x2="40" y2="70" stroke="rgba(201,168,76,0.3)" stroke-width="0.5"/>
+      <line x1="10" y1="40" x2="70" y2="40" stroke="rgba(201,168,76,0.3)" stroke-width="0.5"/>
+    </svg>`
+  }
+];
+
+const BUILDINGS = [
+  {
+    id: 'regal', label: 'Regal Cinema',
+    svg: `<svg viewBox="0 0 100 90" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="45" width="80" height="40" stroke="#C9A84C"/>
+      <rect x="30" y="30" width="40" height="25" stroke="#C9A84C"/>
+      <rect x="42" y="15" width="16" height="20" stroke="#8B6914"/>
+      <line x1="10" y1="45" x2="90" y2="45" stroke="#C9A84C"/>
+      <line x1="30" y1="30" x2="70" y2="30" stroke="#8B6914"/>
+      <rect x="20" y="55" width="12" height="18" stroke="#C9A84C" stroke-width="0.8"/>
+      <rect x="44" y="55" width="12" height="20" stroke="#C9A84C"/>
+      <rect x="68" y="55" width="12" height="18" stroke="#C9A84C" stroke-width="0.8"/>
+      <rect x="35" y="35" width="8" height="10" stroke="#8B6914" stroke-width="0.7"/>
+      <rect x="57" y="35" width="8" height="10" stroke="#8B6914" stroke-width="0.7"/>
+      <line x1="10" y1="85" x2="90" y2="85" stroke="#C9A84C"/>
+      ${Array.from({length:9},(_,i)=>`<line x1="${10+i*9}" y1="45" x2="${10+i*9}" y2="43" stroke="#C9A84C" stroke-width="0.7"/>`).join('')}
+    </svg>`
+  },
+  {
+    id: 'victoria', label: 'VT Station',
+    svg: `<svg viewBox="0 0 100 90" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <rect x="5" y="55" width="90" height="30" stroke="#C9A84C"/>
+      <rect x="15" y="40" width="70" height="20" stroke="#C9A84C"/>
+      <rect x="30" y="25" width="40" height="20" stroke="#8B6914"/>
+      <rect x="43" y="10" width="14" height="20" stroke="#C9A84C"/>
+      <polygon points="50,5 56,10 44,10" stroke="#C9A84C" fill="none"/>
+      <rect x="10" y="60" width="10" height="20" stroke="#8B6914" stroke-width="0.8"/>
+      <rect x="25" y="60" width="10" height="20" stroke="#8B6914" stroke-width="0.8"/>
+      <rect x="65" y="60" width="10" height="20" stroke="#8B6914" stroke-width="0.8"/>
+      <rect x="80" y="60" width="10" height="20" stroke="#8B6914" stroke-width="0.8"/>
+      <rect x="43" y="65" width="14" height="20" stroke="#C9A84C"/>
+      <rect x="35" y="44" width="30" height="0" stroke="#C9A84C"/>
+      <path d="M35 44 Q50 36 65 44" stroke="#C9A84C" fill="none"/>
+      <circle cx="50" cy="40" r="3" stroke="#C9A84C" fill="none"/>
+    </svg>`
+  },
+  {
+    id: 'eros', label: 'Eros Cinema',
+    svg: `<svg viewBox="0 0 100 90" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <rect x="15" y="50" width="70" height="35" stroke="#C9A84C"/>
+      <rect x="25" y="32" width="50" height="22" stroke="#C9A84C"/>
+      <rect x="37" y="18" width="26" height="18" stroke="#8B6914"/>
+      <rect x="46" y="8" width="8" height="14" stroke="#C9A84C"/>
+      <line x1="15" y1="50" x2="85" y2="50" stroke="#C9A84C"/>
+      <line x1="25" y1="32" x2="75" y2="32" stroke="#8B6914"/>
+      <rect x="22" y="58" width="14" height="22" stroke="#C9A84C" stroke-width="0.8"/>
+      <rect x="43" y="60" width="14" height="25" stroke="#C9A84C"/>
+      <rect x="64" y="58" width="14" height="22" stroke="#C9A84C" stroke-width="0.8"/>
+      <rect x="30" y="36" width="8" height="12" stroke="#8B6914" stroke-width="0.7"/>
+      <rect x="62" y="36" width="8" height="12" stroke="#8B6914" stroke-width="0.7"/>
+      ${Array.from({length:7},(_,i)=>`<line x1="${15+i*12}" y1="50" x2="${15+i*12}" y2="48" stroke="#C9A84C" stroke-width="0.6"/>`).join('')}
+    </svg>`
+  },
+  {
+    id: 'gateway', label: 'Gateway',
+    svg: `<svg viewBox="0 0 100 90" fill="none" stroke="#C9A84C" stroke-width="1.2" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="55" width="80" height="28" stroke="#C9A84C"/>
+      <rect x="18" y="38" width="64" height="22" stroke="#C9A84C"/>
+      <path d="M32 38 Q50 16 68 38" stroke="#C9A84C" fill="none"/>
+      <path d="M36 38 Q50 20 64 38" stroke="#8B6914" stroke-width="0.8" fill="none"/>
+      <rect x="42" y="60" width="16" height="23" stroke="#C9A84C"/>
+      <rect x="22" y="58" width="14" height="18" stroke="#8B6914" stroke-width="0.8"/>
+      <rect x="64" y="58" width="14" height="18" stroke="#8B6914" stroke-width="0.8"/>
+      <line x1="10" y1="55" x2="90" y2="55" stroke="#C9A84C"/>
+      <line x1="18" y1="45" x2="82" y2="45" stroke="#8B6914" stroke-width="0.5"/>
+      ${Array.from({length:9},(_,i)=>`<rect x="${10+i*9}" y="55" width="3" height="6" stroke="none" fill="rgba(201,168,76,0.15)"/>`).join('')}
+    </svg>`
+  }
+];
+
+const TYPOGRAPHY = [
+  { id: 'hindi', text: 'नमस्ते', style: 'font-size:26px;color:#C9A84C;font-family:serif;letter-spacing:3px;' },
+  { id: 'english', text: 'BOMBAY', style: 'font-size:20px;color:#C9A84C;font-family:"Cinzel Decorative",serif;letter-spacing:5px;' },
+  { id: 'tamil', text: 'வணக்கம்', style: 'font-size:22px;color:#8B6914;font-family:serif;letter-spacing:2px;' },
+  { id: 'kannada', text: 'ನಮಸ್ಕಾರ', style: 'font-size:20px;color:#C9A84C;font-family:serif;letter-spacing:2px;' },
+  { id: 'bengali', text: 'কলকাতা', style: 'font-size:22px;color:#8B6914;font-family:serif;letter-spacing:2px;' },
+  { id: 'gujarati', text: 'નમસ્તે', style: 'font-size:22px;color:#C9A84C;font-family:serif;letter-spacing:2px;' },
+  { id: 'art-deco-eng', text: 'ART DECO', style: 'font-size:16px;color:#C9A84C;font-family:"Cinzel Decorative",serif;letter-spacing:8px;font-weight:900;' },
+  { id: 'postcard-eng', text: 'POST CARD', style: 'font-size:13px;color:#8B6914;font-family:"Poiret One",sans-serif;letter-spacing:10px;' },
+];
+
+// ===================== PAPER / INK SWATCHES =====================
+const PAPER_COLORS = ['#F5EDD6','#E8DCC0','#D4E8E4','#0D3B38','#1A0A00','#2A1810','#F0E8D5','#E4D5B5'];
+const INK_COLORS = ['#C9A84C','#8B6914','#A63C2A','#0D3B38','#1A5C57','#2C1810','#F5EDD6','#000000'];
+
+// ===================== FRAME SVGs =====================
+const FRAMES = [
+  // Frame 1: Classic border
+  `<rect x="8" y="8" width="664" height="424" stroke="#C9A84C" stroke-width="1.5" fill="none"/>
+   <rect x="14" y="14" width="652" height="412" stroke="#8B6914" stroke-width="0.5" fill="none"/>
+   <rect x="4" y="4" width="672" height="432" stroke="rgba(201,168,76,0.3)" stroke-width="0.5" fill="none"/>
+   <circle cx="8" cy="8" r="3" fill="none" stroke="#C9A84C"/>
+   <circle cx="672" cy="8" r="3" fill="none" stroke="#C9A84C"/>
+   <circle cx="8" cy="432" r="3" fill="none" stroke="#C9A84C"/>
+   <circle cx="672" cy="432" r="3" fill="none" stroke="#C9A84C"/>`,
+  // Frame 2: Geometric corners
+  `<path d="M4 4 L60 4 L60 6 L6 6 L6 60 L4 60 Z" fill="#C9A84C"/>
+   <path d="M676 4 L620 4 L620 6 L674 6 L674 60 L676 60 Z" fill="#C9A84C"/>
+   <path d="M4 436 L60 436 L60 434 L6 434 L6 380 L4 380 Z" fill="#C9A84C"/>
+   <path d="M676 436 L620 436 L620 434 L674 434 L674 380 L676 380 Z" fill="#C9A84C"/>
+   <rect x="8" y="8" width="664" height="424" stroke="rgba(139,105,20,0.5)" stroke-width="0.7" fill="none"/>`,
+  // Frame 3: Stepped deco border
+  `<rect x="6" y="6" width="668" height="428" stroke="#C9A84C" stroke-width="2" fill="none"/>
+   <rect x="12" y="12" width="656" height="416" stroke="#C9A84C" stroke-width="0.5" fill="none"/>
+   <rect x="18" y="18" width="644" height="404" stroke="#8B6914" stroke-width="0.4" fill="none"/>
+   <path d="M6 80 L12 80 L12 12 L80 12 L80 6" stroke="#C9A84C" stroke-width="0.8" fill="none"/>
+   <path d="M674 80 L668 80 L668 12 L600 12 L600 6" stroke="#C9A84C" stroke-width="0.8" fill="none"/>
+   <path d="M6 360 L12 360 L12 428 L80 428 L80 434" stroke="#C9A84C" stroke-width="0.8" fill="none"/>
+   <path d="M674 360 L668 360 L668 428 L600 428 L600 434" stroke="#C9A84C" stroke-width="0.8" fill="none"/>`,
+  // Frame 4: Sunray corners
+  `<rect x="8" y="8" width="664" height="424" stroke="#C9A84C" stroke-width="1" fill="none"/>
+   ${Array.from({length:8},(_,i)=>{const a=i*22.5-90; const r=a*Math.PI/180; return `<line x1="340" y1="${i<4?8:432}" x2="${340+30*Math.cos(r)}" y2="${i<4?8:432}" stroke="#C9A84C" stroke-width="0.7"/>`}).join('')}
+   <line x1="8" y1="220" x2="8" y2="160" stroke="#C9A84C"/>
+   <line x1="8" y1="220" x2="8" y2="280" stroke="#C9A84C"/>
+   <line x1="672" y1="220" x2="672" y2="160" stroke="#C9A84C"/>
+   <line x1="672" y1="220" x2="672" y2="280" stroke="#C9A84C"/>`,
+  // Frame 5: Minimal rule
+  `<line x1="20" y1="20" x2="660" y2="20" stroke="#C9A84C" stroke-width="2"/>
+   <line x1="20" y1="420" x2="660" y2="420" stroke="#C9A84C" stroke-width="2"/>
+   <line x1="20" y1="24" x2="660" y2="24" stroke="#8B6914" stroke-width="0.5"/>
+   <line x1="20" y1="416" x2="660" y2="416" stroke="#8B6914" stroke-width="0.5"/>
+   <line x1="20" y1="20" x2="20" y2="420" stroke="#C9A84C" stroke-width="0.5"/>
+   <line x1="660" y1="20" x2="660" y2="420" stroke="#C9A84C" stroke-width="0.5"/>`
+];
+
+const BG_CLASSES = ['layout-1','layout-2','layout-3','layout-4','layout-5'];
+const BG_COLORS = ['#F5EDD6','#E8DCC0','#D4E8E4','#0D3B38','#1A0A00'];
+
+let currentLayout = 0;
+let currentInkColor = '#8B6914';
+let versions = [];
+let droppedElements = [];
+let selectedEl = null;
+let draggingEl = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let resizing = false;
+let resizeStartW, resizeStartH, resizeStartX, resizeStartY;
+
+// ===================== INIT =====================
+function init() {
+  renderMotifs();
+  renderBuildings();
+  renderTypography();
+  renderSwatches();
+  renderInkSwatches();
+  setFrame(0);
+  setupDropZone();
+}
+
+function renderMotifs() {
+  const grid = document.getElementById('motifs-grid');
+  MOTIFS.forEach(m => {
+    const btn = document.createElement('div');
+    btn.className = 'elem-btn';
+    btn.innerHTML = m.svg + `<span>${m.label}</span>`;
+    btn.draggable = true;
+    btn.dataset.id = m.id;
+    btn.dataset.type = 'motif';
+    btn.addEventListener('dragstart', onDragStart);
+    // Also support click-to-add
+    btn.addEventListener('click', () => addElementCenter(m.id, 'motif'));
+    grid.appendChild(btn);
+  });
+}
+
+function renderBuildings() {
+  const grid = document.getElementById('buildings-grid');
+  BUILDINGS.forEach(b => {
+    const btn = document.createElement('div');
+    btn.className = 'elem-btn';
+    btn.innerHTML = b.svg + `<span>${b.label}</span>`;
+    btn.draggable = true;
+    btn.dataset.id = b.id;
+    btn.dataset.type = 'building';
+    btn.addEventListener('dragstart', onDragStart);
+    btn.addEventListener('click', () => addElementCenter(b.id, 'building'));
+    grid.appendChild(btn);
+  });
+}
+
+function renderTypography() {
+  const panel = document.getElementById('type-panel');
+  TYPOGRAPHY.forEach(t => {
+    const btn = document.createElement('div');
+    btn.className = 'type-btn';
+    btn.innerHTML = `<span style="${t.style}">${t.text}</span>`;
+    btn.draggable = true;
+    btn.dataset.id = t.id;
+    btn.dataset.type = 'text';
+    btn.addEventListener('dragstart', onDragStart);
+    btn.addEventListener('click', () => addElementCenter(t.id, 'text'));
+    panel.appendChild(btn);
+  });
+}
+
+function renderSwatches() {
+  const row = document.getElementById('swatch-row');
+  PAPER_COLORS.forEach((c, i) => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (i === 0 ? ' active' : '');
+    s.style.background = c;
+    s.title = c;
+    s.addEventListener('click', () => {
+      document.querySelectorAll('#swatch-row .swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      document.querySelector('#postcard .card-bg').style.background = c;
+    });
+    row.appendChild(s);
+  });
+}
+
+function renderInkSwatches() {
+  const row = document.getElementById('ink-swatch-row');
+  INK_COLORS.forEach((c, i) => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (i === 0 ? ' active' : '');
+    s.style.background = c;
+    s.title = c;
+    s.addEventListener('click', () => {
+      document.querySelectorAll('#ink-swatch-row .swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      currentInkColor = c;
+      // Update selected element color if it's an SVG
+      if (selectedEl) {
+        selectedEl.querySelectorAll('path, rect, circle, line, ellipse, polygon, polyline').forEach(el => {
+          if (el.getAttribute('stroke') && el.getAttribute('stroke') !== 'none') {
+            el.setAttribute('stroke', c);
+          }
+        });
+      }
+    });
+    row.appendChild(s);
+  });
+}
+
+function setFrame(index) {
+  document.getElementById('card-frame-svg').innerHTML = FRAMES[index];
+}
+
+// ===================== DRAG FROM SIDEBAR =====================
+let dragData = null;
+
+function onDragStart(e) {
+  dragData = { id: e.currentTarget.dataset.id, type: e.currentTarget.dataset.type };
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+function setupDropZone() {
+  const card = document.getElementById('postcard');
+  card.addEventListener('dragover', e => {
+    e.preventDefault();
+    card.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (!dragData) return;
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    placeElement(dragData.id, dragData.type, x, y);
+    dragData = null;
+  });
+}
+
+function addElementCenter(id, type) {
+  placeElement(id, type, 50 + (Math.random()-0.5)*20, 50 + (Math.random()-0.5)*20);
+}
+
+function placeElement(id, type, xPct, yPct) {
+  const layer = document.getElementById('elements-layer');
+  const el = document.createElement('div');
+  el.className = 'dropped-el stamp-anim';
+  el.dataset.id = id;
+  el.dataset.type = type;
+
+  let size = type === 'building' ? 100 : type === 'text' ? 'auto' : 72;
+
+  if (type === 'motif') {
+    const src = MOTIFS.find(m => m.id === id);
+    if (src) {
+      el.innerHTML = src.svg;
+      el.querySelector('svg').style.width = size + 'px';
+      el.querySelector('svg').style.height = size + 'px';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+    }
+  } else if (type === 'building') {
+    const src = BUILDINGS.find(b => b.id === id);
+    if (src) {
+      el.innerHTML = src.svg;
+      el.querySelector('svg').style.width = size + 'px';
+      el.querySelector('svg').style.height = 'auto';
+      el.style.width = size + 'px';
+    }
+  } else if (type === 'text') {
+    const src = TYPOGRAPHY.find(t => t.id === id);
+    if (src) {
+      el.innerHTML = `<span style="${src.style}">${src.text}</span>`;
+    }
+  }
+
+  // Position in percentage
+  el.style.left = `calc(${xPct}% - ${typeof size === 'number' ? size/2 : 50}px)`;
+  el.style.top = `calc(${yPct}% - ${typeof size === 'number' ? size/2 : 15}px)`;
+
+  // Delete handle
+  const del = document.createElement('div');
+  del.className = 'del-handle';
+  del.textContent = '×';
+  del.addEventListener('click', e => { e.stopPropagation(); el.remove(); if(selectedEl===el) selectedEl=null; });
+  el.appendChild(del);
+
+  // Resize handle
+  const rsz = document.createElement('div');
+  rsz.className = 'resize-handle';
+  rsz.addEventListener('mousedown', e => { e.stopPropagation(); startResize(e, el); });
+  el.appendChild(rsz);
+
+  // Select on click
+  el.addEventListener('mousedown', e => { if(e.target === rsz) return; startDragEl(e, el); selectEl(el); });
+  el.addEventListener('dblclick', () => { el.remove(); if(selectedEl===el) selectedEl=null; });
+
+  layer.appendChild(el);
+
+  // Remove animation class after it plays
+  setTimeout(() => el.classList.remove('stamp-anim'), 400);
+}
+
+function selectEl(el) {
+  if (selectedEl) selectedEl.classList.remove('selected');
+  selectedEl = el;
+  el.classList.add('selected');
+  document.addEventListener('click', deselectOnOutside);
+}
+
+function deselectOnOutside(e) {
+  if (selectedEl && !selectedEl.contains(e.target) && !e.target.closest('#postcard')) {
+    selectedEl.classList.remove('selected');
+    selectedEl = null;
+    document.removeEventListener('click', deselectOnOutside);
+  }
+}
+
+// ===================== DRAG ELEMENTS ON CANVAS =====================
+function startDragEl(e, el) {
+  e.preventDefault();
+  const card = document.getElementById('postcard');
+  const cardRect = card.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  dragOffsetX = e.clientX - elRect.left;
+  dragOffsetY = e.clientY - elRect.top;
+  draggingEl = el;
+  el.style.transition = 'none';
+
+  function onMove(ev) {
+    if (!draggingEl) return;
+    const newLeft = ev.clientX - cardRect.left - dragOffsetX;
+    const newTop = ev.clientY - cardRect.top - dragOffsetY;
+    draggingEl.style.left = newLeft + 'px';
+    draggingEl.style.top = newTop + 'px';
+  }
+
+  function onUp() {
+    draggingEl = null;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// ===================== RESIZE =====================
+function startResize(e, el) {
+  e.preventDefault();
+  resizing = true;
+  resizeStartX = e.clientX;
+  resizeStartY = e.clientY;
+  resizeStartW = el.offsetWidth;
+  resizeStartH = el.offsetHeight;
+
+  function onMove(ev) {
+    if (!resizing) return;
+    const dw = ev.clientX - resizeStartX;
+    const newW = Math.max(30, resizeStartW + dw);
+    el.style.width = newW + 'px';
+    const svgEl = el.querySelector('svg');
+    if (svgEl) svgEl.style.width = newW + 'px';
+  }
+
+  function onUp() {
+    resizing = false;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// ===================== LAYOUT RANDOMIZER =====================
+function randomLayout() {
+  const card = document.getElementById('postcard');
+  const els = document.getElementById('elements-layer').children;
+  if (els.length === 0) {
+    showToast('Add some elements first!');
+    return;
+  }
+
+  // Remove old layout class
+  BG_CLASSES.forEach(c => card.classList.remove(c));
+
+  // Pick random new layout (different from current)
+  let newLayout;
+  do { newLayout = Math.floor(Math.random() * FRAMES.length); } while (newLayout === currentLayout && FRAMES.length > 1);
+  currentLayout = newLayout;
+
+  // Update frame
+  setFrame(newLayout);
+
+  // Update bg
+  document.querySelector('#postcard .card-bg').style.background = BG_COLORS[newLayout % BG_COLORS.length];
+  if (newLayout >= 3) {
+    card.classList.add(BG_CLASSES[newLayout]);
+  }
+
+  // Redistribute elements in random artful layout
+  const layouts = [
+    // Scattered
+    () => Array.from(els).forEach(el => {
+      el.style.left = (10 + Math.random() * 70) + '%';
+      el.style.top = (10 + Math.random() * 70) + '%';
+    }),
+    // Grid
+    () => Array.from(els).forEach((el, i) => {
+      const cols = Math.ceil(Math.sqrt(els.length));
+      el.style.left = ((i % cols) / cols * 80 + 10) + '%';
+      el.style.top = (Math.floor(i / cols) / cols * 80 + 10) + '%';
+    }),
+    // Circular
+    () => Array.from(els).forEach((el, i) => {
+      const a = (i / els.length) * Math.PI * 2;
+      el.style.left = (50 + 30 * Math.cos(a)) + '%';
+      el.style.top = (45 + 25 * Math.sin(a)) + '%';
+    }),
+    // Horizontal band
+    () => Array.from(els).forEach((el, i) => {
+      el.style.left = (5 + (i / Math.max(els.length-1,1)) * 85) + '%';
+      el.style.top = (35 + (Math.random()-0.5) * 20) + '%';
+    }),
+    // Diagonal
+    () => Array.from(els).forEach((el, i) => {
+      const t = i / Math.max(els.length-1,1);
+      el.style.left = (10 + t * 70 + (Math.random()-0.5)*10) + '%';
+      el.style.top = (10 + t * 70 + (Math.random()-0.5)*10) + '%';
+    })
+  ];
+
+  const fn = layouts[Math.floor(Math.random() * layouts.length)];
+  fn();
+
+  showToast('Layout Shuffled ✦');
+}
+
+// ===================== SAVE VERSION =====================
+function saveVersion() {
+  const card = document.getElementById('postcard');
+  const list = document.getElementById('versions-list');
+  const versionNum = versions.length + 1;
+
+  // Snapshot the card as a mini preview using inline SVG capture
+  const snapshot = card.cloneNode(true);
+  snapshot.style.transform = 'scale(0.15)';
+  snapshot.style.transformOrigin = 'top left';
+  snapshot.style.position = 'absolute';
+  snapshot.style.pointerEvents = 'none';
+  snapshot.style.opacity = '0';
+  document.body.appendChild(snapshot);
+  setTimeout(() => document.body.removeChild(snapshot), 100);
+
+  // Create version card with a canvas-based thumbnail
+  const vCard = document.createElement('div');
+  vCard.className = 'version-card';
+
+  // Simple colored preview
+  const preview = document.createElement('div');
+  const bg = document.querySelector('#postcard .card-bg').style.background || '#F5EDD6';
+  preview.style.cssText = `width:100%;height:50px;background:${bg};position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;`;
+  const elemCount = document.getElementById('elements-layer').children.length;
+  preview.innerHTML = `<div style="font-family:'Cinzel Decorative',serif;font-size:8px;color:#C9A84C;letter-spacing:2px;opacity:0.7">V${versionNum} · ${elemCount} ELEMENTS</div>`;
+
+  // Copy current element positions into version data
+  const savedData = {
+    bg,
+    frameIndex: currentLayout,
+    elements: Array.from(document.getElementById('elements-layer').children)
+      .filter(el => !el.style.display || el.style.display !== 'none')
+      .map(el => ({ id: el.dataset.id, type: el.dataset.type, left: el.style.left, top: el.style.top, width: el.style.width }))
+  };
+
+  versions.push(savedData);
+
+  const label = document.createElement('div');
+  label.className = 'version-label';
+  label.textContent = `Version ${versionNum}`;
+
+  vCard.appendChild(preview);
+  vCard.appendChild(label);
+
+  // Clear placeholder
+  if (list.querySelector('div[style]')) list.innerHTML = '';
+  list.prepend(vCard);
+
+  vCard.addEventListener('click', () => restoreVersion(savedData));
+
+  showToast(`Version ${versionNum} Saved ✦`);
+}
+
+function restoreVersion(data) {
+  const layer = document.getElementById('elements-layer');
+  layer.innerHTML = '';
+  document.querySelector('#postcard .card-bg').style.background = data.bg;
+  setFrame(data.frameIndex);
+  data.elements.forEach(e => {
+    const el = document.createElement('div');
+    el.className = 'dropped-el';
+    el.dataset.id = e.id;
+    el.dataset.type = e.type;
+    el.style.left = e.left;
+    el.style.top = e.top;
+    if (e.width) el.style.width = e.width;
+
+    if (e.type === 'motif') {
+      const src = MOTIFS.find(m => m.id === e.id);
+      if (src) el.innerHTML = src.svg;
+    } else if (e.type === 'building') {
+      const src = BUILDINGS.find(b => b.id === e.id);
+      if (src) el.innerHTML = src.svg;
+    } else if (e.type === 'text') {
+      const src = TYPOGRAPHY.find(t => t.id === e.id);
+      if (src) el.innerHTML = `<span style="${src.style}">${src.text}</span>`;
+    }
+
+    const del = document.createElement('div');
+    del.className = 'del-handle';
+    del.textContent = '×';
+    del.addEventListener('click', ev => { ev.stopPropagation(); el.remove(); });
+    el.appendChild(del);
+
+    const rsz = document.createElement('div');
+    rsz.className = 'resize-handle';
+    rsz.addEventListener('mousedown', ev => { ev.stopPropagation(); startResize(ev, el); });
+    el.appendChild(rsz);
+
+    el.addEventListener('mousedown', ev => { if(ev.target === rsz) return; startDragEl(ev, el); selectEl(el); });
+    el.addEventListener('dblclick', () => el.remove());
+
+    layer.appendChild(el);
+  });
+  showToast('Version Restored');
+}
+
+// ===================== CLEAR CANVAS =====================
+function confirmClear() {
+  const hasElements = document.getElementById('elements-layer').children.length > 0;
+  if (!hasElements) { directClear(); return; }
+  document.getElementById('clear-modal').classList.add('show');
+}
+
+function saveAndClear() {
+  saveVersion();
+  closeModal();
+  setTimeout(doClear, 300);
+}
+
+function directClear() {
+  closeModal();
+  doClear();
+}
+
+function doClear() {
+  document.getElementById('elements-layer').innerHTML = '';
+  selectedEl = null;
+  showToast('Canvas Cleared');
+}
+
+function closeModal() {
+  document.getElementById('clear-modal').classList.remove('show');
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = `
+      position:fixed;bottom:32px;left:50%;transform:translateX(-50%);
+      background:#0F1A18;border:1px solid var(--gold);
+      color:var(--gold);font-family:'Poiret One',sans-serif;
+      font-size:11px;letter-spacing:3px;padding:10px 24px;
+      border-radius:2px;z-index:9999;pointer-events:none;
+      opacity:0;transition:opacity 0.3s;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+}
+
+// Close modal on overlay click
+document.getElementById('clear-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+init();
+</script>
+</body>
+</html>
